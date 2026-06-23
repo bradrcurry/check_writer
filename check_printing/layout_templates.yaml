@@ -1,0 +1,25 @@
+layouts:
+  reliable_6up:
+    check_width_in: 5.0
+    check_height_in: 2.5
+    columns: 3
+    rows: 2
+    rotated: true
+  max_density_6up:
+    check_width_in: 5.25
+    check_height_in: 2.625
+    columns: 3
+    rows: 2
+    rotated: true
+  large_6up:
+    check_width_in: 5.5
+    check_height_in: 2.75
+    columns: 3
+    rows: 2
+    rotated: true
+  standard_3up:
+    check_width_in: 6.0
+    check_height_in: 2.75
+    columns: 1
+    rows: 3
+    rotated: false

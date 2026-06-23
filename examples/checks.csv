@@ -1,0 +1,3 @@
+check_number,payee,amount,memo,date,written_amount
+1001,Sample Power Co,123.45,Electric bill,2026-06-23,
+1002,Sample Water Co,67.89,Water bill,2026-06-24,

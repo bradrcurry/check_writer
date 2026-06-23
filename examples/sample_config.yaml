@@ -1,0 +1,29 @@
+account:
+  account_id: sample
+  payor_name: Sample Payor
+  payor_address:
+    - 123 Example St
+    - Anytown, NY 10001
+  bank_name: Example Bank
+  bank_address:
+    - 100 Bank Ave
+    - Anytown, NY 10001
+  routing_number: "011000015"
+  account_number: "000123456789"
+  fractional_routing_number: "11-15/1000"
+  void_after_days: 90
+micr_font_path:
+layout: reliable_6up
+layout_templates_path:
+output_dir: outputs
+database_path: check_register.sqlite3
+fake_test_mode: true
+calibration:
+  front_x_offset_in: 0.0
+  front_y_offset_in: 0.0
+  back_x_offset_in: 0.0
+  back_y_offset_in: 0.0
+pattern:
+  style: guilloche
+  intensity: 0.08
+  microtext: AUTHORIZED DOCUMENT
