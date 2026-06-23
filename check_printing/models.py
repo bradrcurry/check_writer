@@ -142,6 +142,37 @@ class PatternSettings(BaseModel):
         return value
 
 
+class LogoSettings(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    path: Path | None = None
+    x_in: float = 0.15
+    y_from_top_in: float = 0.12
+    width_in: float = 0.55
+    height_in: float | None = None
+
+    @field_validator("x_in", "y_from_top_in")
+    @classmethod
+    def position_must_be_non_negative(cls, value: float) -> float:
+        if value < 0:
+            raise ValueError("logo position values cannot be negative")
+        return value
+
+    @field_validator("width_in")
+    @classmethod
+    def width_must_be_positive(cls, value: float) -> float:
+        if value <= 0:
+            raise ValueError("logo width must be positive")
+        return value
+
+    @field_validator("height_in")
+    @classmethod
+    def height_must_be_positive(cls, value: float | None) -> float | None:
+        if value is not None and value <= 0:
+            raise ValueError("logo height must be positive")
+        return value
+
+
 class AppConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -157,3 +188,4 @@ class AppConfig(BaseModel):
     fake_test_mode: bool = True
     calibration: Calibration = Field(default_factory=Calibration)
     pattern: PatternSettings = Field(default_factory=PatternSettings)
+    logo: LogoSettings = Field(default_factory=LogoSettings)

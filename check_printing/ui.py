@@ -32,6 +32,7 @@ from check_printing.models import (
     Check,
     CheckStatus,
     DuplexFlip,
+    LogoSettings,
     MicrSettings,
     PatternSettings,
 )
@@ -241,6 +242,40 @@ def _render_config_sidebar(config: AppConfig, config_path: Path) -> AppConfig:
             options=symbol_map_values,
             index=symbol_map_values.index(config.micr.symbol_map.value),
         )
+    with st.sidebar.expander("Logo"):
+        logo_path = _path_or_none(
+            st.text_input(
+                "Logo path",
+                value=str(config.logo.path or ""),
+                help="Use PNG, JPEG, WebP, or another ReportLab-supported image file.",
+            )
+        )
+        uploaded_logo = st.file_uploader("Upload logo", type=["png", "jpg", "jpeg", "webp"])
+        if uploaded_logo is not None and st.button("Save uploaded logo"):
+            try:
+                logo_path = _save_uploaded_logo(uploaded_logo)
+                st.success(f"Saved logo to {logo_path}")
+                st.rerun()
+            except Exception as exc:
+                st.error(str(exc))
+        logo_x = st.number_input("Logo X from left", min_value=0.0, value=config.logo.x_in, step=0.05)
+        logo_y = st.number_input(
+            "Logo Y from top",
+            min_value=0.0,
+            value=config.logo.y_from_top_in,
+            step=0.05,
+        )
+        logo_width = st.number_input(
+            "Logo width",
+            min_value=0.05,
+            value=config.logo.width_in,
+            step=0.05,
+        )
+        logo_height_text = st.text_input(
+            "Logo height override",
+            value="" if config.logo.height_in is None else str(config.logo.height_in),
+            help="Leave blank to preserve image aspect ratio.",
+        )
 
     st.sidebar.header("Calibration")
     front_x = st.sidebar.number_input("Front X offset", value=config.calibration.front_x_offset_in)
@@ -297,6 +332,13 @@ def _render_config_sidebar(config: AppConfig, config_path: Path) -> AppConfig:
             back_y_offset_in=float(back_y),
         ),
         pattern=PatternSettings(style=BackgroundStyle(str(style)), intensity=float(intensity)),
+        logo=LogoSettings(
+            path=logo_path,
+            x_in=float(logo_x),
+            y_from_top_in=float(logo_y),
+            width_in=float(logo_width),
+            height_in=_optional_float(logo_height_text),
+        ),
     )
 
     if st.sidebar.button("Save config"):
@@ -392,6 +434,21 @@ def _apply_routing_entry(entry: RoutingDirectoryEntry) -> None:
     st.session_state["profile_bank_address"] = "\n".join(entry.bank_address_lines)
     st.success("Applied selected bank fields. Save config to persist them.")
     st.rerun()
+
+
+def _save_uploaded_logo(uploaded_file: Any) -> Path:
+    suffix = Path(str(uploaded_file.name)).suffix.lower()
+    if suffix not in {".png", ".jpg", ".jpeg", ".webp"}:
+        raise ValueError("Logo must be PNG, JPEG, or WebP")
+    target_dir = Path("assets") / "logos"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    safe_stem = "".join(
+        char if char.isalnum() or char in {"-", "_"} else "-"
+        for char in Path(str(uploaded_file.name)).stem
+    ).strip("-_")
+    target = target_dir / f"{safe_stem or 'logo'}{suffix}"
+    target.write_bytes(uploaded_file.getbuffer())
+    return target
 
 
 def _render_generate_tab(config: AppConfig) -> None:
@@ -963,6 +1020,11 @@ def _parse_decimal(value: str) -> Decimal:
 def _path_or_none(value: str) -> Path | None:
     stripped = value.strip()
     return Path(stripped) if stripped else None
+
+
+def _optional_float(value: str) -> float | None:
+    stripped = value.strip()
+    return float(stripped) if stripped else None
 
 
 def _lines(value: str) -> list[str]:

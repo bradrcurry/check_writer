@@ -28,3 +28,9 @@ pattern:
   style: guilloche
   intensity: 0.08
   microtext: AUTHORIZED DOCUMENT
+logo:
+  path:
+  x_in: 0.15
+  y_from_top_in: 0.12
+  width_in: 0.55
+  height_in:
