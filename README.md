@@ -197,15 +197,20 @@ layouts:
 
 ## MICR Fonts
 
-The project does not bundle a MICR font. Configure `micr_font_path` in `config.local.yaml` after reviewing the font license. Candidate fonts to evaluate include GnuMICR and other appropriately licensed MICR E-13B fonts from reputable open-source font collections.
+The project does not bundle a MICR font. Configure `micr_font_path` in `config.local.yaml` after reviewing the font license. This keeps the project license simple and lets each user choose a font that fits their printer, bank, and redistribution requirements.
+
+Known MICR font options:
+
+- [GnuMICR](https://github.com/alerque/gnumicr) — GPL-licensed MICR / E13-B font. It maps the four MICR symbols to `A B C D`, which this project supports. Keep downloaded copies outside this repository, for example under `local_fonts/`, and review its GPL terms before redistribution.
+- Commercial MICR E-13B fonts — often include support or certification details, but license terms vary. Confirm that the font permits your intended use.
+
+Other open-source MICR fonts may work if they expose the E-13B digits and symbols through Unicode MICR code points or the common `A B C D` symbol mapping. Always test output with your bank before relying on it.
 
 Suggested local setup:
 
 ```yaml
 micr_font_path: C:/Users/you/fonts/GnuMICR.ttf
 ```
-
-For local testing, this project can use GnuMICR from `https://github.com/alerque/gnumicr`. Keep downloaded font files under `local_fonts/`, which is ignored by Git. If you redistribute the font, review and comply with its GPL-2.0 license terms, including keeping the license and source files with the font.
 
 If no font is configured, or if the configured file does not exist, the CLI prints a warning and the generator uses Courier as a visible test fallback. That output should not be treated as bank-ready MICR. Real-world compatibility can depend on exact MICR font metrics, placement, paper, laser printer quality, toner, and bank processing rules.
 

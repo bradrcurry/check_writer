@@ -44,11 +44,14 @@ with a dependency whose license fits your distribution requirements.
 This repository does not bundle a MICR font. Users provide a local MICR E-13B
 font path in `config.local.yaml`.
 
-GnuMICR is one candidate font for local testing. It is distributed under the
-GNU General Public License, and downloaded copies should remain outside this
-repository under `local_fonts/`, which is ignored by Git. If you redistribute
-GnuMICR or another MICR font, review and comply with that font's license,
-including any requirement to include license and source files.
+GnuMICR is one known candidate font for local testing:
+<https://github.com/alerque/gnumicr>
+
+It is distributed under the GNU General Public License, maps MICR symbols to
+`A B C D`, and downloaded copies should remain outside this repository under
+`local_fonts/`, which is ignored by Git. If you redistribute GnuMICR or another
+MICR font, review and comply with that font's license, including any requirement
+to include license and source files.
 
 ## Generated Output and Local Data
 
