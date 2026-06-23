@@ -33,7 +33,7 @@ dev = [
   "types-PyYAML==6.0.12.20240808",
 ]
 fonts = [
-  "fonttools==4.53.1",
+  "fonttools==4.60.2",
   "pillow==10.4.0",
 ]
 ui = [
