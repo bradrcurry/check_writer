@@ -116,6 +116,15 @@ the bank name/address fields to your profile. If you do not have a local
 directory file, use the linked Federal Reserve E-Payments Routing Directory and
 enter the confirmed values manually.
 
+For business/commercial checks, the sidebar can also attach a company logo to
+the check front. Use the Logo controls to upload a PNG/JPEG/WebP file or point
+`logo.path` at an existing image. Uploaded logos are saved under `assets/logos/`;
+commit only logos you intentionally want public. Keep private or customer logos
+under `assets/logos/private/` or name them `*.local.*` so Git ignores them.
+Adjust `logo.x_in`, `logo.y_from_top_in`, and `logo.width_in` to position the
+image. Leave `logo.height_in` blank to preserve the image aspect ratio. The PDF
+generator rejects logo placement that enters the MICR clear band.
+
 After any PDF is generated (single check, sheet, batch, calibration, or reprint), an inline preview renders the exact pages that will print, labeled by sheet and front/back. The preview uses PyMuPDF, an AGPL-3.0 dependency; install it with the UI extra only if those terms fit your use case:
 
 ```powershell

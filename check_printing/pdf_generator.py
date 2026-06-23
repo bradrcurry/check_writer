@@ -7,6 +7,7 @@ from typing import TypeVar
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfgen.canvas import Canvas
+from reportlab.platypus.flowables import Image
 
 from check_printing.micr import (
     MicrFontRegistration,
@@ -37,6 +38,7 @@ def prepare_checks_pdf(checks: Sequence[Check], config: AppConfig) -> MicrFontRe
     micr_registration = register_micr_font(config.micr_font_path, config.micr.symbol_map)
     layout = get_layout(config.layout, config.layout_templates_path)
     _validate_micr_geometry(checks, config, layout, micr_registration)
+    _validate_logo_geometry(config, layout)
     return micr_registration
 
 
@@ -163,14 +165,16 @@ def _draw_front_check(
     canvas.setStrokeGray(0.10)
     _draw_check_border(canvas, x, y, width, height, respect_clear_band=True)
     _draw_front_background(canvas, x, y, width, height, config)
+    _draw_logo(canvas, x, y, width, height, config)
 
     canvas.setFillGray(0)
     canvas.setStrokeGray(0)
     canvas.setFont("Helvetica-Bold", 8)
-    canvas.drawString(x + 12, y + height - 16, account.payor_name)
+    header_x = x + 12 + _logo_header_offset(config)
+    canvas.drawString(header_x, y + height - 16, account.payor_name)
     canvas.setFont("Helvetica", 6)
     for line_index, line in enumerate(account.payor_address[:2]):
-        canvas.drawString(x + 12, y + height - 25 - line_index * 7, line)
+        canvas.drawString(header_x, y + height - 25 - line_index * 7, line)
 
     canvas.setFont("Helvetica-Bold", 7)
     canvas.drawCentredString(x + width / 2, y + height - 17, account.bank_name)
@@ -298,6 +302,59 @@ def _validate_micr_geometry(
                 f"{left_x / INCH:.3f} in of the left edge (need >= {MICR_LEFT_CLEARANCE_IN} in). "
                 "Use a wider check layout or a smaller MICR font."
             )
+
+
+def _draw_logo(canvas: Canvas, x: float, y: float, width: float, height: float, config: AppConfig) -> None:
+    logo = config.logo
+    if logo.path is None:
+        return
+    image_width, image_height = _logo_size_points(config)
+    logo_x = x + logo.x_in * INCH
+    logo_y = y + height - logo.y_from_top_in * INCH - image_height
+    try:
+        Image(str(logo.path), width=image_width, height=image_height).drawOn(canvas, logo_x, logo_y)
+    except Exception as exc:
+        raise ValueError(f"Could not draw logo {logo.path}: {exc}") from exc
+
+
+def _logo_header_offset(config: AppConfig) -> float:
+    if config.logo.path is None:
+        return 0
+    return config.logo.x_in * INCH + config.logo.width_in * INCH + 6
+
+
+def _logo_size_points(config: AppConfig) -> tuple[float, float]:
+    logo = config.logo
+    if logo.path is None:
+        return 0, 0
+    image_width = logo.width_in * INCH
+    if logo.height_in is not None:
+        return image_width, logo.height_in * INCH
+    if logo.path.exists():
+        try:
+            image = Image(str(logo.path), width=image_width, height=image_width)
+            aspect = image.imageHeight / image.imageWidth
+            return image_width, image_width * aspect
+        except Exception:
+            pass
+    return image_width, image_width
+
+
+def _validate_logo_geometry(config: AppConfig, layout: Layout) -> None:
+    logo = config.logo
+    if logo.path is None:
+        return
+    if not logo.path.exists():
+        raise ValueError(f"Logo file not found: {logo.path}")
+    image_width, image_height = _logo_size_points(config)
+    x = logo.x_in * INCH
+    y = layout.check_height - logo.y_from_top_in * INCH - image_height
+    if x + image_width > layout.check_width:
+        raise ValueError("Logo extends beyond the right edge of the check")
+    if y < CLEAR_BAND_IN * INCH:
+        raise ValueError("Logo extends into the MICR clear band; move it up or reduce its size")
+    if y + image_height > layout.check_height:
+        raise ValueError("Logo extends beyond the top edge of the check")
 
 
 def _draw_back_check(

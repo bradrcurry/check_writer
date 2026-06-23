@@ -4,7 +4,14 @@ from decimal import Decimal
 
 import pytest
 from check_printing import pdf_generator
-from check_printing.models import AccountProfile, AppConfig, Check, DuplexFlip, MicrSettings
+from check_printing.models import (
+    AccountProfile,
+    AppConfig,
+    Check,
+    DuplexFlip,
+    LogoSettings,
+    MicrSettings,
+)
 from check_printing.pdf_generator import generate_checks_pdf
 from check_printing.templates import INCH
 from pydantic import ValidationError
@@ -98,12 +105,53 @@ def test_micr_numeric_settings_are_validated() -> None:
         MicrSettings(right_margin_in=-0.01)
 
 
+def test_logo_renders_when_configured(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    logo_path = _write_test_png(tmp_path / "logo.png")
+    output = tmp_path / "checks.pdf"
+    checks = [Check(check_number=1001, payee="Sample Payee", amount=Decimal("10.00"))]
+
+    generate_checks_pdf(
+        checks,
+        AppConfig(output_dir=tmp_path, logo=LogoSettings(path=logo_path, width_in=0.25)),
+        output,
+    )
+
+    assert output.exists()
+    assert output.stat().st_size > 1000
+
+
+def test_logo_cannot_enter_micr_clear_band(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    logo_path = _write_test_png(tmp_path / "logo.png")
+    output = tmp_path / "checks.pdf"
+    checks = [Check(check_number=1001, payee="Sample Payee", amount=Decimal("10.00"))]
+
+    with pytest.raises(ValueError, match="MICR clear band"):
+        generate_checks_pdf(
+            checks,
+            AppConfig(
+                output_dir=tmp_path,
+                logo=LogoSettings(path=logo_path, y_from_top_in=1.5, width_in=0.8),
+            ),
+            output,
+        )
+
+    assert not output.exists()
+
+
 def _preview_available() -> bool:
     try:
         import fitz  # noqa: F401
     except ImportError:
         return False
     return True
+
+
+def _write_test_png(path) -> object:  # type: ignore[no-untyped-def]
+    from PIL import Image
+
+    image = Image.new("RGB", (12, 6), "black")
+    image.save(path)
+    return path
 
 
 def _text_line_directions(page) -> set[tuple[float, ...]]:  # type: ignore[no-untyped-def]
