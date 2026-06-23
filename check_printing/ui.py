@@ -41,6 +41,13 @@ from check_printing.preview import (
     preview_available,
     render_pdf_to_pngs,
 )
+from check_printing.routing_directory import (
+    FED_SEARCH_URL,
+    RoutingDirectoryEntry,
+    load_routing_directory,
+    lookup_routing_number,
+    search_bank_name,
+)
 from check_printing.storage import CheckRegister, RegisterEntry
 from check_printing.templates import Layout, get_layout, load_layouts
 
@@ -143,25 +150,34 @@ def _load_or_default(config_path: Path) -> AppConfig:
 
 def _render_config_sidebar(config: AppConfig, config_path: Path) -> AppConfig:
     st.sidebar.header("Profile")
-    account_id = st.sidebar.text_input("Account ID", value=config.account.account_id)
-    payor_name = st.sidebar.text_input("Payor name", value=config.account.payor_name)
+    _init_profile_state(config)
+    account_id = st.sidebar.text_input("Account ID", key="profile_account_id")
+    payor_name = st.sidebar.text_input("Payor name", key="profile_payor_name")
     payor_address = st.sidebar.text_area(
         "Payor address",
-        value="\n".join(config.account.payor_address),
+        key="profile_payor_address",
         height=70,
     )
-    bank_name = st.sidebar.text_input("Bank name", value=config.account.bank_name)
+    bank_name = st.sidebar.text_input("Bank name", key="profile_bank_name")
     bank_address = st.sidebar.text_area(
         "Bank address",
-        value="\n".join(config.account.bank_address),
+        key="profile_bank_address",
         height=70,
     )
-    routing_number = st.sidebar.text_input("Routing number", value=config.account.routing_number)
-    account_number = st.sidebar.text_input("Account number", value=config.account.account_number)
+    routing_number = st.sidebar.text_input("Routing number", key="profile_routing_number")
+    account_number = st.sidebar.text_input("Account number", key="profile_account_number")
     fractional = st.sidebar.text_input(
         "Fractional routing",
-        value=config.account.fractional_routing_number or "",
+        key="profile_fractional_routing",
     )
+    routing_directory_path = _path_or_none(
+        st.sidebar.text_input(
+            "Routing directory path",
+            value=str(config.routing_directory_path or ""),
+            help="Optional local FedACH fixed-width file or CSV for bank lookup.",
+        )
+    )
+    _render_routing_lookup(config, routing_directory_path)
 
     st.sidebar.header("Template")
     layout_templates_path_text = st.sidebar.text_input(
@@ -269,6 +285,7 @@ def _render_config_sidebar(config: AppConfig, config_path: Path) -> AppConfig:
         ),
         layout=str(layout),
         layout_templates_path=layout_templates_path,
+        routing_directory_path=routing_directory_path,
         duplex_flip=DuplexFlip(str(duplex_flip)),
         output_dir=output_dir,
         database_path=database_path,
@@ -289,6 +306,92 @@ def _render_config_sidebar(config: AppConfig, config_path: Path) -> AppConfig:
         except Exception as exc:
             st.sidebar.error(str(exc))
     return edited
+
+
+def _init_profile_state(config: AppConfig) -> None:
+    defaults = {
+        "profile_account_id": config.account.account_id,
+        "profile_payor_name": config.account.payor_name,
+        "profile_payor_address": "\n".join(config.account.payor_address),
+        "profile_bank_name": config.account.bank_name,
+        "profile_bank_address": "\n".join(config.account.bank_address),
+        "profile_routing_number": config.account.routing_number,
+        "profile_account_number": config.account.account_number,
+        "profile_fractional_routing": config.account.fractional_routing_number or "",
+    }
+    for key, value in defaults.items():
+        st.session_state.setdefault(key, value)
+
+
+def _render_routing_lookup(config: AppConfig, routing_directory_path: Path | None) -> None:
+    with st.sidebar.expander("Routing lookup"):
+        st.caption(
+            "Search a local FedACH fixed-width file or CSV. Verify the selected routing "
+            "number with your bank before printing checks."
+        )
+        st.link_button("Open Federal Reserve directory", FED_SEARCH_URL)
+        if routing_directory_path is None:
+            st.info("Set Routing directory path to enable local search.")
+            return
+        try:
+            entries = load_routing_directory(routing_directory_path)
+        except Exception as exc:
+            st.warning(str(exc))
+            return
+
+        st.caption(f"Loaded {len(entries):,} routing entries.")
+        if st.button("Find current routing number"):
+            matches = lookup_routing_number(entries, str(st.session_state["profile_routing_number"]))
+            st.session_state["routing_lookup_matches"] = matches
+            st.session_state["routing_lookup_mode"] = "routing"
+        name_query = st.text_input(
+            "Search bank name",
+            value=str(st.session_state.get("profile_bank_name", config.account.bank_name)),
+            key="routing_lookup_name_query",
+        )
+        if st.button("Search bank name"):
+            st.session_state["routing_lookup_matches"] = search_bank_name(entries, name_query)
+            st.session_state["routing_lookup_mode"] = "name"
+        _render_routing_matches()
+
+
+def _render_routing_matches() -> None:
+    matches = cast(
+        list[RoutingDirectoryEntry],
+        st.session_state.get("routing_lookup_matches", []),
+    )
+    if "routing_lookup_matches" not in st.session_state:
+        return
+    if not matches:
+        st.warning("No routing directory matches found.")
+        return
+    selected_label = st.selectbox(
+        "Matching routing numbers",
+        options=[entry.label for entry in matches],
+        key="routing_lookup_selected_label",
+    )
+    selected = matches[[entry.label for entry in matches].index(str(selected_label))]
+    st.write(
+        {
+            "routing_number": selected.routing_number,
+            "bank_name": selected.customer_name,
+            "address": selected.address,
+            "city": selected.city,
+            "state": selected.state,
+            "zip": selected.zip_code,
+            "phone": selected.phone,
+        }
+    )
+    if st.button("Apply selected bank"):
+        _apply_routing_entry(selected)
+
+
+def _apply_routing_entry(entry: RoutingDirectoryEntry) -> None:
+    st.session_state["profile_routing_number"] = entry.routing_number
+    st.session_state["profile_bank_name"] = entry.customer_name
+    st.session_state["profile_bank_address"] = "\n".join(entry.bank_address_lines)
+    st.success("Applied selected bank fields. Save config to persist them.")
+    st.rerun()
 
 
 def _render_generate_tab(config: AppConfig) -> None:

@@ -15,6 +15,7 @@ account:
 micr_font_path:
 layout: reliable_6up
 layout_templates_path:
+routing_directory_path:
 output_dir: outputs
 database_path: check_register.sqlite3
 fake_test_mode: true
