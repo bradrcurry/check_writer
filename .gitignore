@@ -34,3 +34,8 @@ id_rsa
 id_rsa.pub
 outputs/
 local_fonts/
+/routing_directory.*
+/fedach*.txt
+/fedwire*.txt
+/fedach*.csv
+/fedwire*.csv

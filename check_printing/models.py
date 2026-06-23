@@ -150,6 +150,7 @@ class AppConfig(BaseModel):
     micr: MicrSettings = Field(default_factory=MicrSettings)
     layout: str = "reliable_6up"
     layout_templates_path: Path | None = None
+    routing_directory_path: Path | None = None
     duplex_flip: DuplexFlip = DuplexFlip.LONG_EDGE
     output_dir: Path = Path("outputs")
     database_path: Path = Path("check_register.sqlite3")

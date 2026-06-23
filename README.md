@@ -108,6 +108,14 @@ The UI uses the same YAML config, PDF generator, calibration generator, and SQLi
 
 A status banner at the top of every tab shows whether a real MICR font is loaded (vs. the Courier test fallback) and which duplex flip is active — the two settings most likely to ruin a real print run.
 
+The sidebar also includes an optional routing lookup helper. Set
+`routing_directory_path` to a local FedACH fixed-width directory file or CSV,
+then search by the current routing number or by bank name. Bank-name search
+lists local matches so you can select the correct routing number before applying
+the bank name/address fields to your profile. If you do not have a local
+directory file, use the linked Federal Reserve E-Payments Routing Directory and
+enter the confirmed values manually.
+
 After any PDF is generated (single check, sheet, batch, calibration, or reprint), an inline preview renders the exact pages that will print, labeled by sheet and front/back. The preview uses PyMuPDF, an AGPL-3.0 dependency; install it with the UI extra only if those terms fit your use case:
 
 ```powershell
