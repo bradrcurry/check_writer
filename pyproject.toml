@@ -34,7 +34,7 @@ dev = [
 ]
 fonts = [
   "fonttools==4.53.1",
-  "pillow==10.4.0",
+  "pillow==12.3.0",
 ]
 ui = [
   "streamlit==1.38.0",
